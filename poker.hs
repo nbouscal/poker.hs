@@ -99,14 +99,22 @@ getFlush cs = if length cs' >= 5
         cs' = head $ sortByLength $ groupBySuit $ sortBySuit cs
 
 getStraight :: [Card] -> Maybe [Card]
-getStraight cs = if length cs' >= 5
-                 then Just (lastN' 5 cs')
-                 else Nothing
-  where cs' = head $ sortByLength $ foldr f [] $ sort $ nubBy ((==) `on` rank) cs
+getStraight cs = if length cs'' >= 5
+                 then Just (lastN' 5 cs'')
+                 else wheel cs'
+  where cs' = nubBy ((==) `on` rank) cs
+        cs'' = head $ sortByLength $ foldr f [] $ sort cs'
         f a [] = [[a]]
         f a xs@(x:xs') = if succ (rank a) == rank (head x)
                          then (a:x):xs'
                          else [a]:xs
+
+wheel :: [Card] -> Maybe [Card]
+wheel cs = if length cs' == 5
+           then Just cs'
+           else Nothing
+  where cs' = filter f cs
+        f c = rank c `elem` [Ace, Two, Three, Four, Five]
 
 checkGroups :: [Card] -> (HandRank, [Card])
 checkGroups h = (hr, cs)
