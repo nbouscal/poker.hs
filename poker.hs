@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 
 import Data.List
 import Data.List.Split
@@ -81,14 +81,9 @@ makeLenses ''Player
 makeLenses ''Game
 
 value :: [Card] -> Hand
-value h = Hand hr cs
-  where (hr, cs) = case getFlush h of
-                        Just cs -> case getStraight cs of
-                                        Just cs' -> (StraightFlush, cs')
-                                        Nothing  -> (Flush, take 5 cs)
-                        Nothing -> case getStraight h of
-                                        Just cs -> (Straight, cs)
-                                        Nothing -> checkGroups h
+value h = uncurry Hand $ maybe ifNotFlush ifFlush (getFlush h)
+  where ifFlush cs = maybe (Flush, take 5 cs) (StraightFlush,) (getStraight cs)
+        ifNotFlush = maybe (checkGroups h) (Straight,) (getStraight h)
 
 getFlush :: [Card] -> Maybe [Card]
 getFlush cs = if length cs' >= 5
