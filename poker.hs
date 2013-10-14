@@ -108,8 +108,7 @@ wheel :: [Card] -> Maybe [Card]
 wheel cs = if length cs' == 5
            then Just cs'
            else Nothing
-  where cs' = filter f cs
-        f c = rank c `elem` [Ace, Two, Three, Four, Five]
+  where cs' = filter (flip elem [Ace, Two, Three, Four, Five] . rank) cs
 
 checkGroups :: [Card] -> (HandRank, [Card])
 checkGroups h = (hr, cs)
