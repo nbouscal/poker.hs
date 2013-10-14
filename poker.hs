@@ -86,17 +86,13 @@ value h = uncurry Hand $ maybe ifNotFlush ifFlush (getFlush h)
         ifNotFlush = maybe (checkGroups h) (Straight,) (getStraight h)
 
 getFlush :: [Card] -> Maybe [Card]
-getFlush cs = if length cs' >= 5
-              then Just cs'
-              else Nothing
+getFlush cs = if length cs' >= 5 then Just cs' else Nothing
   where groupBySuit = groupBy ((==) `on` suit)
         sortBySuit = sortBy (comparing suit <> flip compare)
         cs' = head $ sortByLength $ groupBySuit $ sortBySuit cs
 
 getStraight :: [Card] -> Maybe [Card]
-getStraight cs = if length cs'' >= 5
-                 then Just (lastN' 5 cs'')
-                 else wheel cs'
+getStraight cs = if length cs'' >= 5 then Just (lastN' 5 cs'') else wheel cs'
   where cs' = nubBy ((==) `on` rank) cs
         cs'' = head $ sortByLength $ foldr f [] $ sort cs'
         f a [] = [[a]]
@@ -105,9 +101,7 @@ getStraight cs = if length cs'' >= 5
                          else [a]:xs
 
 wheel :: [Card] -> Maybe [Card]
-wheel cs = if length cs' == 5
-           then Just cs'
-           else Nothing
+wheel cs = if length cs' == 5 then Just cs' else Nothing
   where cs' = filter (flip elem [Ace, Two, Three, Four, Five] . rank) cs
 
 checkGroups :: [Card] -> (HandRank, [Card])
