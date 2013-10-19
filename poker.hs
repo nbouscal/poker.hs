@@ -47,7 +47,7 @@ data Card = Card
   , suit :: Suit
   } deriving Eq
 instance Ord Card where
-  compare (Card r1 s1) (Card r2 s2) = compare r1 r2
+  compare = compare `on` rank
 instance Show Card where
   show (Card r s) = show r ++ show s
 
@@ -188,7 +188,7 @@ showGame :: StateT Game IO ()
 showGame = do
   ps <- use players
   cs <- use community
-  let hs = map ((value . (++cs) &&& id) . (^.pockets)) ps
+  let hs = map ((value . (++cs) &&& id) . view pockets) ps
       ws = maximums hs
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
       showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (h^.handRank) ++ "\n") ""
