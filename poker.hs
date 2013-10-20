@@ -1,10 +1,12 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DeriveFunctor #-}
 
+import Data.Char (toLower)
 import Data.List
 import Data.List.Split
 import Data.Ord
 import Data.Monoid
 import Data.Function
+import Control.Monad
 import Control.Monad.Random.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State
@@ -13,6 +15,7 @@ import Control.Arrow
 import Control.Lens
 import System.Random.Shuffle (shuffleM)
 import System.IO
+import Text.Read (readMaybe)
 
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
           | Jack | Queen | King | Ace
@@ -55,6 +58,11 @@ data HandRank = HighCard | Pair | TwoPair | Trips | Straight | Flush
               | FullHouse | Quads | StraightFlush
   deriving (Eq, Ord, Show)
 
+data GenericBet a = None | Check | Bet a | Fold
+  deriving (Eq, Ord, Show, Functor)
+
+type Bet = GenericBet Int
+
 data Hand = Hand
   { _handRank :: HandRank
   , _cards :: [Card]
@@ -63,6 +71,7 @@ data Hand = Hand
 data Player = Player
   { _pockets :: [Card]
   , _chips :: Int
+  , _bet :: Bet
   }
 
 data Game = Game
@@ -71,6 +80,7 @@ data Game = Game
   , _deck :: [Card]
   , _street :: Street
   , _pot :: Int
+  , _maxBet :: Bet
   }
 
 data Street = PreDeal | PreFlop | Flop | Turn | River
@@ -145,6 +155,8 @@ dealCommunity :: Int -> StateT Game IO ()
 dealCommunity n = use deck >>=
   uncurry (>>) . bimap (community <>=) (deck .=) . splitAt n
 
+-- who is dealer? last in array => rotate array each hand?
+--                add a _dealer to game, index of players?
 dealPlayers :: Int -> StateT Game IO ()
 dealPlayers n = do
   m <- uses players length
@@ -156,6 +168,76 @@ dealPlayers n = do
 shuffle :: StateT Game IO ()
 shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
 
+
+
+betting :: StateT Game IO ()
+betting = do
+  g <- get
+  unless (bettingDone g) $ lift (bettingRound g) >>= put >> betting
+
+-- betting = until bettingDone bettingRound -- recurse over list until end of round
+
+bettingDone :: Game -> Bool
+bettingDone g = all f ps
+  where mb = g^.maxBet
+        ps = g^.players
+        f p = case p^.bet of
+                   None -> False
+                   Fold -> True
+                   _ -> p^.bet == mb
+
+bettingRound :: Game -> IO Game
+bettingRound g = return $ players.traversed %~ (bet .~ Fold) $ g
+
+-- playerAction :: Player -> StateT Game IO ()
+-- playerAction player = do
+--   mb <- use maxBet
+--   if player^.bet == Fold
+--   then return () -- continue to other players
+--   else if mb > Check
+--        then if player^.bet < mb
+--             then do -- bet or fold
+--               b <- lift $ betOrFold mb
+--               if b > mb
+--               then player.bet .~ b >> maxBet .= b
+--               else player.bet .~ b
+--             else return () -- end of round of betting
+--        else if player.bet == None
+--             then do -- check or bet
+--               b <- checkOrBet
+--               player.bet .~ b
+--               maxBet .= b
+--             else return () -- end of round of betting
+
+betOrFold :: Bet -> IO Bet
+betOrFold mb = do
+  putStrLn "Fold, Call, or Raise?"
+  input <- getLine
+  case map toLower input of
+       "fold" -> return Fold
+       "call" -> return mb
+       "raise" -> do
+         putStrLn "Raise by how much?"
+         r <- getBetAmount
+         return $ fmap (+r) mb
+       _ -> betOrFold mb
+
+checkOrBet :: IO Bet
+checkOrBet = do
+  putStrLn "Check or Bet?"
+  input <- getLine
+  case map toLower input of
+       "check" -> return Check
+       "bet"  -> putStrLn "Bet how much?" >> fmap Bet getBetAmount
+       _ -> checkOrBet
+
+getBetAmount :: IO Int
+getBetAmount = do
+  b <- fmap readMaybe getLine
+  maybe (putStrLn "Invalid bet" >> getBetAmount) return b
+
+
+
 initialState :: Game
 initialState = Game
   { _players = replicate 5 player
@@ -163,10 +245,12 @@ initialState = Game
   , _deck = Card <$> [minBound..] <*> [minBound..]
   , _pot = 0
   , _street = PreDeal
+  , _maxBet = None
   }
   where player = Player
           { _pockets = []
           , _chips = 1500
+          , _bet = None
           }
 
 play :: StateT Game IO ()
