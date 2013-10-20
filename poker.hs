@@ -176,7 +176,11 @@ betting = do
   g <- get
   unless (bettingDone g) $ lift (bettingRound g) >>= put >> betting
 
--- betting = until bettingDone bettingRound -- recurse over list until end of round
+showBets :: StateT Game IO ()
+showBets = do
+  ps <- use players
+  let ps' = map (view bet &&& view chips) ps
+  lift $ print ps'
 
 bettingDone :: Game -> Bool
 bettingDone g = all f ps
@@ -197,6 +201,10 @@ bettingRound g = do
 mapAccumM :: (Monad m, Functor m, Traversable t) => (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
 mapAccumM f = runStateT . traverse (StateT . f)
 
+toInt :: Bet -> Int
+toInt (Bet x) = x
+toInt _ = 0
+
 playerAction :: Player -> Bet -> IO (Player, Bet)
 playerAction p mb = let b = p^.bet in
   if b == Fold
@@ -205,12 +213,13 @@ playerAction p mb = let b = p^.bet in
        then if b < mb
             then do
               b' <- betOrFold mb
-              return (bet .~ b' $ p, max b' mb)
+              let d = max 0 $ (toInt b') - (toInt b)
+              return (chips -~ d $ bet .~ b' $ p, max b' mb)
             else return (p, mb)
        else if b == None
             then do
               b' <- checkOrBet
-              return (bet .~ b' $ p, b')
+              return (chips -~ (toInt b') $ bet .~ b' $ p, b')
             else return (p, mb)
 
 betOrFold :: Bet -> IO Bet
