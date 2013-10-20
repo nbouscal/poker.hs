@@ -7,14 +7,12 @@ import Data.Ord
 import Data.Monoid
 import Data.Function
 import Data.Traversable (traverse)
-import Control.Monad
 import Control.Monad.Random.Class
 import Control.Monad.State
 import Control.Applicative
 import Control.Arrow
 import Control.Lens
 import System.Random.Shuffle (shuffleM)
-import System.IO
 import Text.Read (readMaybe)
 
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
