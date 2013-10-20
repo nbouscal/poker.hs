@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DeriveFunctor, FlexibleContexts #-}
 
 import Data.Char (toLower)
 import Data.List
@@ -9,8 +9,7 @@ import Data.Function
 import Data.Traversable (traverse)
 import Control.Monad
 import Control.Monad.Random.Class
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
+import Control.Monad.State
 import Control.Applicative
 import Control.Arrow
 import Control.Lens
@@ -141,7 +140,7 @@ maximums (x:xs) = foldl f [x] xs
                       EQ -> y:xs
                       LT -> [y]
 
-advance :: StateT Game IO ()
+advance :: MonadState Game m => m ()
 advance = do
   s <- use street
   case s of
@@ -152,13 +151,13 @@ advance = do
        River -> street .= minBound
   where nextStreet = street %= succ
 
-dealCommunity :: Int -> StateT Game IO ()
+dealCommunity :: MonadState Game m => Int -> m ()
 dealCommunity n = use deck >>=
   uncurry (>>) . bimap (community <>=) (deck .=) . splitAt n
 
 -- who is dealer? last in array => rotate array each hand?
 --                add a _dealer to game, index of players?
-dealPlayers :: Int -> StateT Game IO ()
+dealPlayers :: MonadState Game m => Int -> m ()
 dealPlayers n = do
   m <- uses players length
   d <- use deck
@@ -166,7 +165,7 @@ dealPlayers n = do
   players.traversed %@= (\i -> pockets <>~ (hs !! i))
   deck .= d'
 
-shuffle :: StateT Game IO ()
+shuffle :: (MonadState Game m, MonadRandom m) => m ()
 shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
 
 
