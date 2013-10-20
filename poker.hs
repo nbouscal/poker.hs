@@ -206,24 +206,28 @@ toInt (Bet x) = x
 toInt _ = 0
 
 playerAction :: Player -> Bet -> IO (Player, Bet)
-playerAction p mb = let b = p^.bet in
-  if b == Fold
-  then return (p, mb)
-  else if mb > Check
-       then if b < mb
-            then do
-              b' <- betOrFold mb
-              let d = max 0 $ (toInt b') - (toInt b)
-              return (chips -~ d $ bet .~ b' $ p, max b' mb)
-            else return (p, mb)
-       else if b == None
-            then do
-              b' <- checkOrBet
-              return (chips -~ (toInt b') $ bet .~ b' $ p, b')
-            else return (p, mb)
+playerAction p mb = case mb of
+  (Bet x) | b == Fold -> next
+          | b < mb    -> betOrFold p mb
+  _       | b == None -> checkOrBet p
+          | otherwise -> next
+  where b = p^.bet
+        next = return (p, mb)
 
-betOrFold :: Bet -> IO Bet
-betOrFold mb = do
+betOrFold :: Player -> Bet -> IO (Player, Bet)
+betOrFold p mb = do
+  b' <- getBetOrFold mb
+  let d = max 0 $ (toInt b') - (toInt $ p^.bet)
+  return (chips -~ d $ bet .~ b' $ p, max b' mb)
+
+checkOrBet :: Player -> IO (Player, Bet)
+checkOrBet p =  do
+  b' <- getCheckOrBet
+  let d = toInt b'
+  return (chips -~ d $ bet .~ b' $ p, b')
+
+getBetOrFold :: Bet -> IO Bet
+getBetOrFold mb = do
   putStrLn "Fold, Call, or Raise?"
   input <- getLine
   case map toLower input of
@@ -233,16 +237,16 @@ betOrFold mb = do
          putStrLn "Raise by how much?"
          r <- getBetAmount
          return $ fmap (+r) mb
-       _ -> betOrFold mb
+       _ -> getBetOrFold mb
 
-checkOrBet :: IO Bet
-checkOrBet = do
+getCheckOrBet :: IO Bet
+getCheckOrBet = do
   putStrLn "Check or Bet?"
   input <- getLine
   case map toLower input of
        "check" -> return Check
        "bet"  -> putStrLn "Bet how much?" >> fmap Bet getBetAmount
-       _ -> checkOrBet
+       _ -> getCheckOrBet
 
 getBetAmount :: IO Int
 getBetAmount = do
