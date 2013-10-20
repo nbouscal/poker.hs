@@ -143,6 +143,7 @@ maximums (x:xs) = foldl f [x] xs
 advance :: MonadState Game m => m ()
 advance = do
   s <- use street
+  clearBets
   case s of
        PreDeal -> nextStreet >> dealPlayers 2
        PreFlop -> nextStreet >> dealCommunity 3
@@ -150,6 +151,9 @@ advance = do
        Turn -> nextStreet >> dealCommunity 1
        River -> street .= minBound
   where nextStreet = street %= succ
+        clearUnlessFold Fold = Fold
+        clearUnlessFold _    = None
+        clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
 
 dealCommunity :: MonadState Game m => Int -> m ()
 dealCommunity n = use deck >>=
