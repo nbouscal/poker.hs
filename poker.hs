@@ -147,7 +147,7 @@ advance = do
        PreFlop -> nextStreet >> dealCommunity 3
        Flop -> nextStreet >> dealCommunity 1
        Turn -> nextStreet >> dealCommunity 1
-       River -> street .= minBound
+       River -> street .= minBound >> deck .= initialState^.deck
   where nextStreet = street %= succ
         clearUnlessFold Fold = Fold
         clearUnlessFold _    = None
