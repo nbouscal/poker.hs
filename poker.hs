@@ -6,6 +6,7 @@ import Data.List.Split
 import Data.Ord
 import Data.Monoid
 import Data.Function
+import Data.Traversable (traverse)
 import Control.Monad
 import Control.Monad.Random.Class
 import Control.Monad.Trans.Class
@@ -58,7 +59,7 @@ data HandRank = HighCard | Pair | TwoPair | Trips | Straight | Flush
               | FullHouse | Quads | StraightFlush
   deriving (Eq, Ord, Show)
 
-data GenericBet a = None | Check | Bet a | Fold
+data GenericBet a = None | Fold | Check | Bet a
   deriving (Eq, Ord, Show, Functor)
 
 type Bet = GenericBet Int
@@ -187,27 +188,30 @@ bettingDone g = all f ps
                    _ -> p^.bet == mb
 
 bettingRound :: Game -> IO Game
-bettingRound g = return $ players.traversed %~ (bet .~ Fold) $ g
+bettingRound g = do
+  let ps = g^.players
+      mb = g^.maxBet
+  (ps', mb') <- mapAccumM playerAction ps mb
+  return (maxBet .~ mb' $ players .~ ps' $ g)
 
--- playerAction :: Player -> StateT Game IO ()
--- playerAction player = do
---   mb <- use maxBet
---   if player^.bet == Fold
---   then return () -- continue to other players
---   else if mb > Check
---        then if player^.bet < mb
---             then do -- bet or fold
---               b <- lift $ betOrFold mb
---               if b > mb
---               then player.bet .~ b >> maxBet .= b
---               else player.bet .~ b
---             else return () -- end of round of betting
---        else if player.bet == None
---             then do -- check or bet
---               b <- checkOrBet
---               player.bet .~ b
---               maxBet .= b
---             else return () -- end of round of betting
+mapAccumM :: (Monad m, Functor m, Traversable t) => (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
+mapAccumM f = runStateT . traverse (StateT . f)
+
+playerAction :: Player -> Bet -> IO (Player, Bet)
+playerAction p mb = let b = p^.bet in
+  if b == Fold
+  then return (p, mb)
+  else if mb > Check
+       then if b < mb
+            then do
+              b' <- betOrFold mb
+              return (bet .~ b' $ p, max b' mb)
+            else return (p, mb)
+       else if b == None
+            then do
+              b' <- checkOrBet
+              return (bet .~ b' $ p, b')
+            else return (p, mb)
 
 betOrFold :: Bet -> IO Bet
 betOrFold mb = do
