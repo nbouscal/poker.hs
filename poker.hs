@@ -20,28 +20,28 @@ data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
   deriving (Eq, Ord, Bounded, Enum)
 instance Show Rank where
   show x = case x of
-                Two   -> "2"
-                Three -> "3"
-                Four  -> "4"
-                Five  -> "5"
-                Six   -> "6"
-                Seven -> "7"
-                Eight -> "8"
-                Nine  -> "9"
-                Ten   -> "T"
-                Jack  -> "J"
-                Queen -> "Q"
-                King  -> "K"
-                Ace   -> "A"
+    Two   -> "2"
+    Three -> "3"
+    Four  -> "4"
+    Five  -> "5"
+    Six   -> "6"
+    Seven -> "7"
+    Eight -> "8"
+    Nine  -> "9"
+    Ten   -> "T"
+    Jack  -> "J"
+    Queen -> "Q"
+    King  -> "K"
+    Ace   -> "A"
 
 data Suit = Clubs | Diamonds | Hearts | Spades
   deriving (Eq, Ord, Bounded, Enum)
 instance Show Suit where
   show x = case x of
-                Clubs    -> "♧ "
-                Diamonds -> "♢ "
-                Hearts   -> "♡ "
-                Spades   -> "♤ "
+    Clubs    -> "♧ "
+    Diamonds -> "♢ "
+    Hearts   -> "♡ "
+    Spades   -> "♤ "
 
 data Card = Card
   { rank :: Rank
@@ -58,7 +58,6 @@ data HandRank = HighCard | Pair | TwoPair | Trips | Straight | Flush
 
 data GenericBet a = None | Fold | Check | Bet a
   deriving (Eq, Ord, Show, Functor)
-
 type Bet = GenericBet Int
 
 data Hand = Hand
@@ -199,12 +198,13 @@ bettingRound g = do
   (ps', mb') <- mapAccumM playerAction ps mb
   return (maxBet .~ mb' $ players .~ ps' $ g)
 
-mapAccumM :: (Monad m, Functor m, Traversable t) => (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
+mapAccumM :: (Monad m, Functor m, Traversable t) =>
+             (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
 mapAccumM f = runStateT . traverse (StateT . f)
 
 toInt :: Bet -> Int
 toInt (Bet x) = x
-toInt _ = 0
+toInt _       = 0
 
 playerAction :: Player -> Bet -> IO (Player, Bet)
 playerAction p mb = case mb of
@@ -218,7 +218,7 @@ playerAction p mb = case mb of
 betOrFold :: Player -> Bet -> IO (Player, Bet)
 betOrFold p mb = do
   b' <- getBetOrFold mb
-  let d = max 0 $ (toInt b') - (toInt $ p^.bet)
+  let d = max 0 $ toInt b' - toInt (p^.bet)
   return (chips -~ d $ bet .~ b' $ p, max b' mb)
 
 checkOrBet :: Player -> IO (Player, Bet)
