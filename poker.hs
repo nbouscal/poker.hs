@@ -278,10 +278,7 @@ initialState = Game
 play :: StateT Game IO ()
 play = do
   shuffle
-  advance
-  advance
-  advance
-  advance
+  replicateM_ 4 (advance >> betting)
   showGame
 
 showGame :: StateT Game IO ()
