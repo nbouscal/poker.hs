@@ -177,19 +177,14 @@ betting = do
   unless (bettingDone g) $ lift (bettingRound g) >>= put >> betting
 
 showBets :: StateT Game IO ()
-showBets = do
-  ps <- use players
-  let ps' = map (view bet &&& view chips) ps
-  lift $ print ps'
+showBets = use players >>= lift . print . map (view bet &&& view chips)
 
 bettingDone :: Game -> Bool
-bettingDone g = all f ps
-  where mb = g^.maxBet
-        ps = g^.players
-        f p = case p^.bet of
+bettingDone g = all f $ g^.players
+  where f p = case p^.bet of
                    None -> False
                    Fold -> True
-                   _ -> p^.bet == mb
+                   _ -> p^.bet == g^.maxBet
 
 bettingRound :: Game -> IO Game
 bettingRound g = do
@@ -236,7 +231,7 @@ getBetOrFold mb = do
        "call" -> return mb
        "raise" -> do
          putStrLn "Raise by how much?"
-         r <- getBetAmount
+         r <- getBet
          return $ fmap (+r) mb
        _ -> getBetOrFold mb
 
@@ -246,13 +241,11 @@ getCheckOrBet = do
   input <- getLine
   case map toLower input of
        "check" -> return Check
-       "bet"  -> putStrLn "Bet how much?" >> fmap Bet getBetAmount
+       "bet"  -> putStrLn "Bet how much?" >> fmap Bet getBet
        _ -> getCheckOrBet
 
-getBetAmount :: IO Int
-getBetAmount = do
-  b <- fmap readMaybe getLine
-  maybe (putStrLn "Invalid bet" >> getBetAmount) return b
+getBet :: IO Int
+getBet = getLine >>= maybe (putStrLn "Invalid bet" >> getBet) return . readMaybe
 
 
 
