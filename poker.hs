@@ -174,7 +174,7 @@ shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
 betting :: StateT Game IO ()
 betting = do
   g <- get
-  unless (bettingDone g) $ lift (bettingRound g) >>= put >> betting
+  unless (bettingDone g) $ bettingRound' >> betting
 
 showBets :: StateT Game IO ()
 showBets = use players >>= lift . print . map (view bet &&& view chips)
@@ -188,10 +188,21 @@ bettingDone g = all f $ g^.players
 
 bettingRound :: Game -> IO Game
 bettingRound g = do
-  let ps = g^.players
-      mb = g^.maxBet
-  (ps', mb') <- mapAccumM playerAction ps mb
-  return (maxBet .~ mb' $ players .~ ps' $ g)
+  (ps, mb) <- mapAccumM playerAction (g^.players) (g^.maxBet)
+  return (maxBet .~ mb $ players .~ ps $ g)
+
+bettingRound' :: StateT Game IO ()
+bettingRound' = liftM2 (,) (use players) (use maxBet) >>=
+                lift . uncurry (mapAccumM playerAction) >>=
+                uncurry (>>) . bimap (players .=) (maxBet .=)
+
+bettingRound'' :: StateT Game IO ()
+bettingRound'' = do
+  ps <- use players
+  mb <- use maxBet
+  (ps', mb') <- lift (mapAccumM playerAction ps mb)
+  players .= ps'
+  maxBet .= mb'
 
 mapAccumM :: (Monad m, Functor m, Traversable t) =>
              (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
