@@ -175,6 +175,7 @@ betting :: StateT Game IO ()
 betting = do
   g <- get
   unless (bettingDone g) $ bettingRound' >> betting
+  pot .= (7500 - getSum (g^.players.traversed.chips.to Sum))
 
 showBets :: StateT Game IO ()
 showBets = use players >>= lift . print . map (view bet &&& view chips)
