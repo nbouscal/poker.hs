@@ -175,7 +175,6 @@ betting :: StateT Game IO ()
 betting = do
   g <- get
   unless (bettingDone g) $ bettingRound >> betting
-  pot .= (7500 - getSum (g^.players.traversed.chips.to Sum))
 
 showBets :: StateT Game IO ()
 showBets = use players >>= lift . print . map (view bet &&& view chips)
@@ -212,6 +211,7 @@ betOrFold p = do
   b' <- lift $ getBetOrFold mb
   maxBet .= (max b' mb)
   let d = max 0 $ toInt b' - toInt (p^.bet)
+  pot += d
   return $ chips -~ d $ bet .~ b' $ p
 
 checkOrBet :: Player -> StateT Game IO Player
@@ -219,6 +219,7 @@ checkOrBet p =  do
   b' <- lift getCheckOrBet
   maxBet .= b'
   let d = toInt b'
+  pot += d
   return $ chips -~ d $ bet .~ b' $ p
 
 getBetOrFold :: Bet -> IO Bet
