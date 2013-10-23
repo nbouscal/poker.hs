@@ -194,30 +194,32 @@ playerAction :: Player -> StateT Game IO [Player]
 playerAction p = do
   mb <- use maxBet
   let b = p^.bet
-      next = return (p, mb)
-  (p, mb') <- case mb of
+      next = return p
+  p <- case mb of
     (Bet x) | b == Fold -> next
-            | b < mb    -> lift $ betOrFold p mb
-    _       | b == None -> lift $ checkOrBet p
+            | b < mb    -> betOrFold p
+    _       | b == None -> checkOrBet p
             | otherwise -> next
-  maxBet .= mb'
   return [p]
 
 toInt :: Bet -> Int
 toInt (Bet x) = x
 toInt _       = 0
 
-betOrFold :: Player -> Bet -> IO (Player, Bet)
-betOrFold p mb = do
-  b' <- getBetOrFold mb
+betOrFold :: Player -> StateT Game IO Player
+betOrFold p = do
+  mb <- use maxBet
+  b' <- lift $ getBetOrFold mb
+  maxBet .= (max b' mb)
   let d = max 0 $ toInt b' - toInt (p^.bet)
-  return (chips -~ d $ bet .~ b' $ p, max b' mb)
+  return $ chips -~ d $ bet .~ b' $ p
 
-checkOrBet :: Player -> IO (Player, Bet)
+checkOrBet :: Player -> StateT Game IO Player
 checkOrBet p =  do
-  b' <- getCheckOrBet
+  b' <- lift getCheckOrBet
+  maxBet .= b'
   let d = toInt b'
-  return (chips -~ d $ bet .~ b' $ p, b')
+  return $ chips -~ d $ bet .~ b' $ p
 
 getBetOrFold :: Bet -> IO Bet
 getBetOrFold mb = do
