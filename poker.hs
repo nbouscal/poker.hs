@@ -174,7 +174,7 @@ shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
 betting :: StateT Game IO ()
 betting = do
   g <- get
-  unless (bettingDone g) $ bettingRound' >> betting
+  unless (bettingDone g) $ bettingRound >> betting
   pot .= (7500 - getSum (g^.players.traversed.chips.to Sum))
 
 showBets :: StateT Game IO ()
@@ -187,40 +187,25 @@ bettingDone g = all f $ g^.players
                    Fold -> True
                    _ -> p^.bet == g^.maxBet
 
-bettingRound :: Game -> IO Game
-bettingRound g = do
-  (ps, mb) <- mapAccumM playerAction (g^.players) (g^.maxBet)
-  return (maxBet .~ mb $ players .~ ps $ g)
+bettingRound :: StateT Game IO ()
+bettingRound = get >>= (^!players.traversed.act playerAction) >>= (players .=)
 
-bettingRound' :: StateT Game IO ()
-bettingRound' = liftM2 (,) (use players) (use maxBet) >>=
-                lift . uncurry (mapAccumM playerAction) >>=
-                uncurry (>>) . bimap (players .=) (maxBet .=)
-
-bettingRound'' :: StateT Game IO ()
-bettingRound'' = do
-  ps <- use players
+playerAction :: Player -> StateT Game IO [Player]
+playerAction p = do
   mb <- use maxBet
-  (ps', mb') <- lift (mapAccumM playerAction ps mb)
-  players .= ps'
+  let b = p^.bet
+      next = return (p, mb)
+  (p, mb') <- case mb of
+    (Bet x) | b == Fold -> next
+            | b < mb    -> lift $ betOrFold p mb
+    _       | b == None -> lift $ checkOrBet p
+            | otherwise -> next
   maxBet .= mb'
-
-mapAccumM :: (Monad m, Functor m, Traversable t) =>
-             (a -> s -> m (b, s)) -> t a -> s -> m (t b, s)
-mapAccumM f = runStateT . traverse (StateT . f)
+  return [p]
 
 toInt :: Bet -> Int
 toInt (Bet x) = x
 toInt _       = 0
-
-playerAction :: Player -> Bet -> IO (Player, Bet)
-playerAction p mb = case mb of
-  (Bet x) | b == Fold -> next
-          | b < mb    -> betOrFold p mb
-  _       | b == None -> checkOrBet p
-          | otherwise -> next
-  where b = p^.bet
-        next = return (p, mb)
 
 betOrFold :: Player -> Bet -> IO (Player, Bet)
 betOrFold p mb = do
