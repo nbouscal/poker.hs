@@ -69,7 +69,7 @@ data Player = Player
   { _pockets :: [Card]
   , _chips :: Int
   , _bet :: Bet
-  }
+  } deriving Eq
 
 data Game = Game
   { _players :: [Player]
@@ -151,7 +151,8 @@ advance = do
        PreFlop -> nextStreet >> dealCommunity 3
        Flop -> nextStreet >> dealCommunity 1
        Turn -> nextStreet >> dealCommunity 1
-       River -> street .= minBound >> deck .= initialState^.deck
+       River -> street .= minBound >> deck .= initialState^.deck >>
+                winners >>= splitPot
   where nextStreet = street %= succ
         clearUnlessFold Fold = Fold
         clearUnlessFold _    = None
@@ -174,7 +175,22 @@ dealPlayers n = do
 shuffle :: (MonadState Game m, MonadRandom m) => m ()
 shuffle = deck <~ (get >>= perform (deck.act shuffleM))
 
+winners :: MonadState Game m => m [Player]
+winners = do
+  ps <- use players
+  cs <- use community
+  let ps' = filter (\p -> p^.bet /= Fold) ps
+      hs = map (value . (++cs) . view pockets &&& id) ps'
+      ws = maximums hs
+  return $ ws^..traversed._2
 
+splitPot :: MonadState Game m => [Player] -> m ()
+splitPot ps = do
+  p <- use pot
+  let n = length ps
+      w = p `div` n
+  pot .= p `rem` n
+  players.traversed.(filtered (`elem` ps)).chips += w
 
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM b s = b >>= (`unless` s)
@@ -251,8 +267,6 @@ getCheckOrBet = do
 getBet :: MonadIO m => m Int
 getBet = liftIO getLine >>= maybe (liftIO $ putStrLn "Invalid bet" >> getBet) return . readMaybe
 
-
-
 initialState :: Game
 initialState = Game
   { _players = replicate 5 player
@@ -278,12 +292,13 @@ showGame :: (MonadState Game m, MonadIO m) => m ()
 showGame = do
   ps <- use players
   cs <- use community
-  let hs = map ((value . (++cs) &&& id) . view pockets) ps
-      ws = maximums hs
+  ws <- winners
+  let getHands = map ((value . (++cs) &&& id) . view pockets)
+      hs = getHands ps
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
       showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (h^.handRank) ++ "\n") ""
   liftIO $ putStr $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
-    (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands ws
+    (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands (getHands ws)
 
 main :: IO Game
 main = runApp play
