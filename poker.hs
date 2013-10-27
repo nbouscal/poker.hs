@@ -167,39 +167,40 @@ dealPlayers n = do
   deck .= d'
 
 shuffle :: (MonadState Game m, MonadRandom m) => m ()
-shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
+shuffle = deck <~ (get >>= perform (deck.act shuffleM))
 
 
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM b s = b >>= (`unless` s)
 
 betting :: StateT Game IO ()
-betting = do
-  g <- get
-  unless (bettingDone g) $ bettingRound >> betting
+betting = unlessM bettingDone $ bettingRound >> betting
 
 showBets :: StateT Game IO ()
 showBets = use players >>= lift . print . map (view bet &&& view chips)
 
-bettingDone :: Game -> Bool
-bettingDone g = all f $ g^.players
-  where f p = case p^.bet of
-                   None -> False
-                   Fold -> True
-                   _ -> p^.bet == g^.maxBet
+bettingDone :: MonadState Game m => m Bool
+bettingDone = do
+  mb <- use maxBet
+  liftM (all $ f mb) $ use players
+  where f mb p = case p^.bet of
+                      None -> False
+                      Fold -> True
+                      _    -> p^.bet == mb
 
 bettingRound :: StateT Game IO ()
-bettingRound = get >>= (^!players.traversed.act playerAction) >>= (players .=)
+bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
 
 playerAction :: Player -> StateT Game IO [Player]
 playerAction p = do
   mb <- use maxBet
   let b = p^.bet
-      next = return p
-  p <- case mb of
-    (Bet x) | b == Fold -> next
-            | b < mb    -> betOrFold p
-    _       | b == None -> checkOrBet p
-            | otherwise -> next
-  return [p]
+  liftM return $ p & case mb of
+    (Bet _) | b == Fold -> return
+            | b < mb    -> betOrFold
+    _       | b == None -> checkOrBet
+            | otherwise -> return
 
 toInt :: Bet -> Int
 toInt (Bet x) = x
@@ -208,32 +209,30 @@ toInt _       = 0
 betOrFold :: Player -> StateT Game IO Player
 betOrFold p = do
   mb <- use maxBet
-  b' <- lift $ getBetOrFold mb
-  maxBet .= (max b' mb)
-  let d = max 0 $ toInt b' - toInt (p^.bet)
-  pot += d
-  return $ chips -~ d $ bet .~ b' $ p
+  b <- lift $ getBetOrFold mb
+  let d = max 0 $ toInt b - toInt (p^.bet)
+  maxBet .= max b mb >> pot += d
+  return $ chips -~ d $ bet .~ b $ p
 
 checkOrBet :: Player -> StateT Game IO Player
 checkOrBet p =  do
-  b' <- lift getCheckOrBet
-  maxBet .= b'
-  let d = toInt b'
-  pot += d
-  return $ chips -~ d $ bet .~ b' $ p
+  b <- lift getCheckOrBet
+  let d = toInt b
+  maxBet .= b >> pot += d
+  return $ chips -~ d $ bet .~ b $ p
 
 getBetOrFold :: Bet -> IO Bet
 getBetOrFold mb = do
   putStrLn "Fold, Call, or Raise?"
   input <- getLine
   case map toLower input of
-       "fold" -> return Fold
-       "call" -> return mb
-       "raise" -> do
-         putStrLn "Raise by how much?"
-         r <- getBet
-         return $ fmap (+r) mb
-       _ -> getBetOrFold mb
+       "fold"  -> return Fold
+       "call"  -> return mb
+       "raise" -> getRaise mb
+       _       -> getBetOrFold mb
+
+getRaise :: Bet -> IO Bet
+getRaise mb = putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
 
 getCheckOrBet :: IO Bet
 getCheckOrBet = do
@@ -241,8 +240,8 @@ getCheckOrBet = do
   input <- getLine
   case map toLower input of
        "check" -> return Check
-       "bet"  -> putStrLn "Bet how much?" >> fmap Bet getBet
-       _ -> getCheckOrBet
+       "bet"   -> putStrLn "Bet how much?" >> fmap Bet getBet
+       _       -> getCheckOrBet
 
 getBet :: IO Int
 getBet = getLine >>= maybe (putStrLn "Invalid bet" >> getBet) return . readMaybe
