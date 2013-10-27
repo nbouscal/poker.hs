@@ -87,6 +87,11 @@ makeLenses ''Hand
 makeLenses ''Player
 makeLenses ''Game
 
+type App = StateT Game IO
+
+runApp :: App a -> IO Game
+runApp k = execStateT k initialState
+
 value :: [Card] -> Hand
 value h = uncurry Hand $ maybe ifNotFlush ifFlush (getFlush h)
   where ifFlush cs = maybe (Flush, take 5 cs) (StraightFlush,) (getStraight cs)
@@ -174,11 +179,11 @@ shuffle = deck <~ (get >>= perform (deck.act shuffleM))
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM b s = b >>= (`unless` s)
 
-betting :: StateT Game IO ()
+betting :: (MonadState Game m, MonadIO m) => m ()
 betting = unlessM bettingDone $ bettingRound >> betting
 
-showBets :: StateT Game IO ()
-showBets = use players >>= lift . print . map (view bet &&& view chips)
+showBets :: (MonadState Game m, MonadIO m) => m ()
+showBets = use players >>= liftIO . print . map (view bet &&& view chips)
 
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
@@ -189,10 +194,10 @@ bettingDone = do
                       Fold -> True
                       _    -> p^.bet == mb
 
-bettingRound :: StateT Game IO ()
+bettingRound :: (MonadState Game m, MonadIO m) => m ()
 bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
 
-playerAction :: Player -> StateT Game IO [Player]
+playerAction :: (MonadState Game m, MonadIO m) => Player -> m [Player]
 playerAction p = do
   mb <- use maxBet
   let b = p^.bet
@@ -206,45 +211,45 @@ toInt :: Bet -> Int
 toInt (Bet x) = x
 toInt _       = 0
 
-betOrFold :: Player -> StateT Game IO Player
+betOrFold :: (MonadState Game m, MonadIO m) => Player -> m Player
 betOrFold p = do
   mb <- use maxBet
-  b <- lift $ getBetOrFold mb
+  b <- getBetOrFold mb
   let d = max 0 $ toInt b - toInt (p^.bet)
   maxBet .= max b mb >> pot += d
   return $ chips -~ d $ bet .~ b $ p
 
-checkOrBet :: Player -> StateT Game IO Player
+checkOrBet :: (MonadState Game m, MonadIO m) => Player -> m Player
 checkOrBet p =  do
-  b <- lift getCheckOrBet
+  b <- getCheckOrBet
   let d = toInt b
   maxBet .= b >> pot += d
   return $ chips -~ d $ bet .~ b $ p
 
-getBetOrFold :: Bet -> IO Bet
+getBetOrFold :: MonadIO m => Bet -> m Bet
 getBetOrFold mb = do
-  putStrLn "Fold, Call, or Raise?"
-  input <- getLine
+  liftIO $ putStrLn "Fold, Call, or Raise?"
+  input <- liftIO $ getLine
   case map toLower input of
        "fold"  -> return Fold
        "call"  -> return mb
        "raise" -> getRaise mb
        _       -> getBetOrFold mb
 
-getRaise :: Bet -> IO Bet
-getRaise mb = putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
+getRaise :: MonadIO m => Bet -> m Bet
+getRaise mb = liftIO $ putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
 
-getCheckOrBet :: IO Bet
+getCheckOrBet :: MonadIO m => m Bet
 getCheckOrBet = do
-  putStrLn "Check or Bet?"
-  input <- getLine
+  liftIO $ putStrLn "Check or Bet?"
+  input <- liftIO $ getLine
   case map toLower input of
        "check" -> return Check
-       "bet"   -> putStrLn "Bet how much?" >> fmap Bet getBet
+       "bet"   -> liftIO $ putStrLn "Bet how much?" >> fmap Bet getBet
        _       -> getCheckOrBet
 
-getBet :: IO Int
-getBet = getLine >>= maybe (putStrLn "Invalid bet" >> getBet) return . readMaybe
+getBet :: MonadIO m => m Int
+getBet = liftIO getLine >>= maybe (liftIO $ putStrLn "Invalid bet" >> getBet) return . readMaybe
 
 
 
@@ -263,13 +268,13 @@ initialState = Game
           , _bet = None
           }
 
-play :: StateT Game IO ()
+play :: App ()
 play = do
   shuffle
   replicateM_ 4 (advance >> betting)
   showGame
 
-showGame :: StateT Game IO ()
+showGame :: (MonadState Game m, MonadIO m) => m ()
 showGame = do
   ps <- use players
   cs <- use community
@@ -277,8 +282,8 @@ showGame = do
       ws = maximums hs
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
       showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (h^.handRank) ++ "\n") ""
-  lift $ putStr $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
+  liftIO $ putStr $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
     (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands ws
 
 main :: IO Game
-main = execStateT play initialState
+main = runApp play
