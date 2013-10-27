@@ -1,46 +1,47 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DeriveFunctor, FlexibleContexts #-}
 
+import Data.Char (toLower)
 import Data.List
 import Data.List.Split
 import Data.Ord
 import Data.Monoid
 import Data.Function
+import Data.Traversable (traverse)
 import Control.Monad.Random.Class
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
+import Control.Monad.State
 import Control.Applicative
 import Control.Arrow
 import Control.Lens
 import System.Random.Shuffle (shuffleM)
-import System.IO
+import Text.Read (readMaybe)
 
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
           | Jack | Queen | King | Ace
   deriving (Eq, Ord, Bounded, Enum)
 instance Show Rank where
   show x = case x of
-                Two   -> "2"
-                Three -> "3"
-                Four  -> "4"
-                Five  -> "5"
-                Six   -> "6"
-                Seven -> "7"
-                Eight -> "8"
-                Nine  -> "9"
-                Ten   -> "T"
-                Jack  -> "J"
-                Queen -> "Q"
-                King  -> "K"
-                Ace   -> "A"
+    Two   -> "2"
+    Three -> "3"
+    Four  -> "4"
+    Five  -> "5"
+    Six   -> "6"
+    Seven -> "7"
+    Eight -> "8"
+    Nine  -> "9"
+    Ten   -> "T"
+    Jack  -> "J"
+    Queen -> "Q"
+    King  -> "K"
+    Ace   -> "A"
 
 data Suit = Clubs | Diamonds | Hearts | Spades
   deriving (Eq, Ord, Bounded, Enum)
 instance Show Suit where
   show x = case x of
-                Clubs    -> "♧ "
-                Diamonds -> "♢ "
-                Hearts   -> "♡ "
-                Spades   -> "♤ "
+    Clubs    -> "♧ "
+    Diamonds -> "♢ "
+    Hearts   -> "♡ "
+    Spades   -> "♤ "
 
 data Card = Card
   { rank :: Rank
@@ -55,6 +56,10 @@ data HandRank = HighCard | Pair | TwoPair | Trips | Straight | Flush
               | FullHouse | Quads | StraightFlush
   deriving (Eq, Ord, Show)
 
+data GenericBet a = None | Fold | Check | Bet a
+  deriving (Eq, Ord, Show, Functor)
+type Bet = GenericBet Int
+
 data Hand = Hand
   { _handRank :: HandRank
   , _cards :: [Card]
@@ -63,6 +68,7 @@ data Hand = Hand
 data Player = Player
   { _pockets :: [Card]
   , _chips :: Int
+  , _bet :: Bet
   }
 
 data Game = Game
@@ -71,6 +77,7 @@ data Game = Game
   , _deck :: [Card]
   , _street :: Street
   , _pot :: Int
+  , _maxBet :: Bet
   }
 
 data Street = PreDeal | PreFlop | Flop | Turn | River
@@ -130,22 +137,28 @@ maximums (x:xs) = foldl f [x] xs
                       EQ -> y:xs
                       LT -> [y]
 
-advance :: StateT Game IO ()
+advance :: MonadState Game m => m ()
 advance = do
   s <- use street
+  clearBets
   case s of
        PreDeal -> nextStreet >> dealPlayers 2
        PreFlop -> nextStreet >> dealCommunity 3
        Flop -> nextStreet >> dealCommunity 1
        Turn -> nextStreet >> dealCommunity 1
-       River -> street .= minBound
+       River -> street .= minBound >> deck .= initialState^.deck
   where nextStreet = street %= succ
+        clearUnlessFold Fold = Fold
+        clearUnlessFold _    = None
+        clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
 
-dealCommunity :: Int -> StateT Game IO ()
+dealCommunity :: MonadState Game m => Int -> m ()
 dealCommunity n = use deck >>=
   uncurry (>>) . bimap (community <>=) (deck .=) . splitAt n
 
-dealPlayers :: Int -> StateT Game IO ()
+-- who is dealer? last in array => rotate array each hand?
+--                add a _dealer to game, index of players?
+dealPlayers :: MonadState Game m => Int -> m ()
 dealPlayers n = do
   m <- uses players length
   d <- use deck
@@ -153,8 +166,87 @@ dealPlayers n = do
   players.traversed %@= (\i -> pockets <>~ (hs !! i))
   deck .= d'
 
-shuffle :: StateT Game IO ()
-shuffle = get >>= (^!deck.act shuffleM) >>= (deck .=)
+shuffle :: (MonadState Game m, MonadRandom m) => m ()
+shuffle = deck <~ (get >>= perform (deck.act shuffleM))
+
+
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM b s = b >>= (`unless` s)
+
+betting :: StateT Game IO ()
+betting = unlessM bettingDone $ bettingRound >> betting
+
+showBets :: StateT Game IO ()
+showBets = use players >>= lift . print . map (view bet &&& view chips)
+
+bettingDone :: MonadState Game m => m Bool
+bettingDone = do
+  mb <- use maxBet
+  liftM (all $ f mb) $ use players
+  where f mb p = case p^.bet of
+                      None -> False
+                      Fold -> True
+                      _    -> p^.bet == mb
+
+bettingRound :: StateT Game IO ()
+bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
+
+playerAction :: Player -> StateT Game IO [Player]
+playerAction p = do
+  mb <- use maxBet
+  let b = p^.bet
+  liftM return $ p & case mb of
+    (Bet _) | b == Fold -> return
+            | b < mb    -> betOrFold
+    _       | b == None -> checkOrBet
+            | otherwise -> return
+
+toInt :: Bet -> Int
+toInt (Bet x) = x
+toInt _       = 0
+
+betOrFold :: Player -> StateT Game IO Player
+betOrFold p = do
+  mb <- use maxBet
+  b <- lift $ getBetOrFold mb
+  let d = max 0 $ toInt b - toInt (p^.bet)
+  maxBet .= max b mb >> pot += d
+  return $ chips -~ d $ bet .~ b $ p
+
+checkOrBet :: Player -> StateT Game IO Player
+checkOrBet p =  do
+  b <- lift getCheckOrBet
+  let d = toInt b
+  maxBet .= b >> pot += d
+  return $ chips -~ d $ bet .~ b $ p
+
+getBetOrFold :: Bet -> IO Bet
+getBetOrFold mb = do
+  putStrLn "Fold, Call, or Raise?"
+  input <- getLine
+  case map toLower input of
+       "fold"  -> return Fold
+       "call"  -> return mb
+       "raise" -> getRaise mb
+       _       -> getBetOrFold mb
+
+getRaise :: Bet -> IO Bet
+getRaise mb = putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
+
+getCheckOrBet :: IO Bet
+getCheckOrBet = do
+  putStrLn "Check or Bet?"
+  input <- getLine
+  case map toLower input of
+       "check" -> return Check
+       "bet"   -> putStrLn "Bet how much?" >> fmap Bet getBet
+       _       -> getCheckOrBet
+
+getBet :: IO Int
+getBet = getLine >>= maybe (putStrLn "Invalid bet" >> getBet) return . readMaybe
+
+
 
 initialState :: Game
 initialState = Game
@@ -163,19 +255,18 @@ initialState = Game
   , _deck = Card <$> [minBound..] <*> [minBound..]
   , _pot = 0
   , _street = PreDeal
+  , _maxBet = None
   }
   where player = Player
           { _pockets = []
           , _chips = 1500
+          , _bet = None
           }
 
 play :: StateT Game IO ()
 play = do
   shuffle
-  advance
-  advance
-  advance
-  advance
+  replicateM_ 4 (advance >> betting)
   showGame
 
 showGame :: StateT Game IO ()
