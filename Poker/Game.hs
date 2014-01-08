@@ -110,8 +110,16 @@ toInt :: Bet -> Int
 toInt (Bet x) = x
 toInt _       = 0
 
+showState :: (MonadState Game m, MonadIO m) => Player -> m ()
+showState p = do
+  c <- use community
+  mb <- use maxBet
+  let state = "Pockets: " ++ (show $ p^.pockets) ++ " Community: " ++ (show c) ++ " Bet: " ++ (show mb)
+  liftIO $ putStrLn state
+
 betOrFold :: (MonadState Game m, MonadIO m) => Player -> m Player
 betOrFold p = do
+  showState p
   mb <- use maxBet
   b <- getBetOrFold mb
   let d = max 0 $ toInt b - toInt (p^.bet)
@@ -120,6 +128,7 @@ betOrFold p = do
 
 checkOrBet :: (MonadState Game m, MonadIO m) => Player -> m Player
 checkOrBet p =  do
+  showState p
   b <- getCheckOrBet
   let d = toInt b
   maxBet .= b >> pot += d
