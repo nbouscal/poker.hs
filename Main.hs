@@ -29,6 +29,9 @@ play = do
   replicateM_ 4 (advance >> betting)
   showGame
 
+showBets :: (MonadState Game m, MonadIO m) => m ()
+showBets = use players >>= liftIO . print . map (view bet &&& view chips)
+
 showGame :: (MonadState Game m, MonadIO m) => m ()
 showGame = do
   ps <- use players

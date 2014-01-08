@@ -81,9 +81,6 @@ unlessM b s = b >>= (`unless` s)
 betting :: (MonadState Game m, MonadIO m) => m ()
 betting = unlessM bettingDone $ bettingRound >> betting
 
-showBets :: (MonadState Game m, MonadIO m) => m ()
-showBets = use players >>= liftIO . print . map (view bet &&& view chips)
-
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
   mb <- use maxBet
@@ -114,7 +111,7 @@ showState :: (MonadState Game m, MonadIO m) => Player -> m ()
 showState p = do
   c <- use community
   mb <- use maxBet
-  let state = "Pockets: " ++ (show $ p^.pockets) ++ " Community: " ++ (show c) ++ " Bet: " ++ (show mb)
+  let state = "Pockets: " ++ (show $ p^.pockets) ++ " Community: " ++ (show c) ++ " Bet: " ++ (show $ toInt mb)
   liftIO $ putStrLn state
 
 betOrFold :: (MonadState Game m, MonadIO m) => Player -> m Player
