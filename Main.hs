@@ -4,6 +4,7 @@ import Control.Arrow
 import Control.Lens
 import Control.Monad.State
 
+import Poker.Betting
 import Poker.Game
 import Poker.Hands
 import Poker.Types
