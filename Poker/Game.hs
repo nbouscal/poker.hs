@@ -27,17 +27,23 @@ advance :: MonadState Game m => m ()
 advance = do
   s <- use street
   clearBets
+  nextStreet s
   case s of
-       PreDeal -> nextStreet >> dealPlayers 2
-       PreFlop -> nextStreet >> dealCommunity 3
-       Flop -> nextStreet >> dealCommunity 1
-       Turn -> nextStreet >> dealCommunity 1
-       River -> street .= minBound >> deck .= initialDeck >>
-                winners >>= splitPot
-  where nextStreet = street %= succ
-        clearUnlessFold Fold = Fold
+       PreDeal -> dealPlayers 2
+       PreFlop -> dealCommunity 3
+       Flop -> dealCommunity 1
+       Turn -> dealCommunity 1
+       River -> deck .= initialDeck >> winners >>= splitPot
+
+clearBets :: MonadState Game m => m ()
+clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
+  where clearUnlessFold Fold = Fold
         clearUnlessFold _    = None
-        clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
+
+nextStreet :: MonadState Game m => Street -> m ()
+nextStreet s = if s == River
+               then street .= minBound
+               else street %= succ
 
 dealCommunity :: MonadState Game m => Int -> m ()
 dealCommunity n = use deck >>=
