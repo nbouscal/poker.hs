@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Poker.Betting where
+module Poker.Betting (
+  betting
+) where
 
 import Control.Lens
 import Control.Monad.State

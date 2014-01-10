@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Poker.Game where
+module Poker.Game (
+  advance, initialDeck, winners, shuffle
+) where
 
 import Control.Applicative
 import Control.Arrow
