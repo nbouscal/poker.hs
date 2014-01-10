@@ -19,11 +19,16 @@ betting = unlessM bettingDone $ bettingRound >> betting
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
   mb <- use maxBet
-  liftM (all $ f mb) $ use players
-  where f mb p = case p^.bet of
+  ps <- use players
+  let bs = map (view bet) ps
+      actives = filter (/= Fold) bs
+  return $ if length actives == 1
+           then True
+           else (all $ f mb) bs
+  where f mb b = case b of
                       None -> False
                       Fold -> True
-                      _    -> p^.bet == mb
+                      _    -> b == mb
 
 bettingRound :: (MonadState Game m, MonadIO m) => m ()
 bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
