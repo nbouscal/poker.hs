@@ -49,7 +49,9 @@ showState :: (MonadState Game m, MonadIO m) => Player -> m ()
 showState p = do
   c <- use community
   mb <- use maxBet
-  let state = "Pockets: " ++ show (p^.pockets) ++ " Community: " ++ show c ++ " Bet: " ++ show (toInt mb)
+  let state = "Pockets: " ++ show (p^.pockets)
+           ++ " Community: " ++ show c
+           ++ " Bet: " ++ show (toInt mb)
   liftIO $ putStrLn state
 
 betOrFold :: (MonadState Game m, MonadIO m) => Player -> m Player
