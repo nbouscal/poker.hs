@@ -71,4 +71,4 @@ splitPot ps = do
   let n = length ps
       w = p `div` n
   pot .= p `rem` n
-  players.traversed.(filtered (`elem` ps)).chips += w
+  players.traversed.filtered (`elem` ps).chips += w

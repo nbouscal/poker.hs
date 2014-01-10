@@ -22,9 +22,7 @@ bettingDone = do
   ps <- use players
   let bs = map (view bet) ps
       actives = filter (/= Fold) bs
-  return $ if length actives == 1
-           then True
-           else (all $ f mb) bs
+  return ((length actives == 1) || (all $ f mb) bs)
   where f mb b = case b of
                       None -> False
                       Fold -> True
@@ -51,7 +49,7 @@ showState :: (MonadState Game m, MonadIO m) => Player -> m ()
 showState p = do
   c <- use community
   mb <- use maxBet
-  let state = "Pockets: " ++ (show $ p^.pockets) ++ " Community: " ++ (show c) ++ " Bet: " ++ (show $ toInt mb)
+  let state = "Pockets: " ++ show (p^.pockets) ++ " Community: " ++ show c ++ " Bet: " ++ show (toInt mb)
   liftIO $ putStrLn state
 
 betOrFold :: (MonadState Game m, MonadIO m) => Player -> m Player
@@ -74,7 +72,7 @@ checkOrBet p =  do
 getBetOrFold :: MonadIO m => Bet -> m Bet
 getBetOrFold mb = do
   liftIO $ putStrLn "Fold, Call, or Raise?"
-  input <- liftIO $ getLine
+  input <- liftIO getLine
   case map toLower input of
        "fold"  -> return Fold
        "call"  -> return mb
@@ -87,7 +85,7 @@ getRaise mb = liftIO $ putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) m
 getCheckOrBet :: MonadIO m => m Bet
 getCheckOrBet = do
   liftIO $ putStrLn "Check or Bet?"
-  input <- liftIO $ getLine
+  input <- liftIO getLine
   case map toLower input of
        "check" -> return Check
        "bet"   -> liftIO $ putStrLn "Bet how much?" >> fmap Bet getBet
