@@ -12,11 +12,12 @@ import Text.Read (readMaybe)
 import Poker.Types
 import Poker.Hands
 
+betting :: (Functor m, MonadState Game m, MonadIO m) => m ()
+betting = unlessM bettingDone $ bettingRound >> betting
+
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM b s = b >>= (`unless` s)
 
-betting :: (MonadState Game m, MonadIO m) => m ()
-betting = unlessM bettingDone $ bettingRound >> betting
 
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
@@ -64,7 +65,9 @@ getAction canBet p = do
   let d = max 0 $ toInt b - toInt (p^.bet)
   if toInt b > p^.chips
   then liftIO (putStrLn "You don't have that many chips.") >> getAction canBet p
-  else maxBet .= max b mb >> pot += d >> (return $ chips -~ d $ bet .~ b $ p)
+  else do maxBet .= max b mb
+          pot += d
+          return $ chips -~ d $ bet .~ b $ p
 
 getBetOrFold :: MonadIO m => Bet -> m Bet
 getBetOrFold mb = do
