@@ -18,6 +18,8 @@ betting = unlessM bettingDone $ bettingRound >> betting
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM b s = b >>= (`unless` s)
 
+putIO :: MonadIO m => String -> m ()
+putIO = liftIO . putStrLn
 
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
@@ -31,10 +33,10 @@ bettingDone = do
                       Fold -> True
                       _    -> b == mb
 
-bettingRound :: (MonadState Game m, MonadIO m) => m ()
+bettingRound :: (Functor m, MonadState Game m, MonadIO m) => m ()
 bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
 
-playerAction :: (MonadState Game m, MonadIO m) => Player -> m [Player]
+playerAction :: (Functor m, MonadState Game m, MonadIO m) => Player -> m [Player]
 playerAction p = do
   mb <- use maxBet
   let b = p^.bet
@@ -55,23 +57,23 @@ showState p = do
   let state = "Pockets: " ++ show (p^.pockets)
            ++ " Community: " ++ show c
            ++ " Bet: " ++ show (toInt mb)
-  liftIO $ putStrLn state
+  putIO state
 
-getAction :: (MonadState Game m, MonadIO m) => Bool -> Player -> m Player
+getAction :: (Functor m, MonadState Game m, MonadIO m) => Bool -> Player -> m Player
 getAction canBet p = do
   showState p
   mb <- use maxBet
   b <- if canBet then getCheckOrBet else getBetOrFold mb
   let d = max 0 $ toInt b - toInt (p^.bet)
   if toInt b > p^.chips
-  then liftIO (putStrLn "You don't have that many chips.") >> getAction canBet p
+  then putIO "You don't have that many chips." >> getAction canBet p
   else do maxBet .= max b mb
           pot += d
           return $ chips -~ d $ bet .~ b $ p
 
 getBetOrFold :: MonadIO m => Bet -> m Bet
 getBetOrFold mb = do
-  liftIO $ putStrLn "Fold, Call, or Raise?"
+  putIO "Fold, Call, or Raise?"
   input <- liftIO getLine
   case map toLower input of
        "fold"  -> return Fold
@@ -80,16 +82,16 @@ getBetOrFold mb = do
        _       -> getBetOrFold mb
 
 getRaise :: MonadIO m => Bet -> m Bet
-getRaise mb = liftIO $ putStrLn "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
+getRaise mb = putIO "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
 
-getCheckOrBet :: MonadIO m => m Bet
+getCheckOrBet :: (Functor m, MonadIO m) => m Bet
 getCheckOrBet = do
-  liftIO $ putStrLn "Check or Bet?"
+  putIO "Check or Bet?"
   input <- liftIO getLine
   case map toLower input of
        "check" -> return Check
-       "bet"   -> liftIO $ putStrLn "Bet how much?" >> fmap Bet getBet
+       "bet"   -> putIO "Bet how much?" >> fmap Bet getBet
        _       -> getCheckOrBet
 
 getBet :: MonadIO m => m Int
-getBet = liftIO getLine >>= maybe (liftIO $ putStrLn "Invalid bet" >> getBet) return . readMaybe
+getBet = liftIO getLine >>= maybe (putIO "Invalid bet" >> getBet) return . readMaybe
