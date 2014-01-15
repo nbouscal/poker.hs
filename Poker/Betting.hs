@@ -39,8 +39,8 @@ playerAction p = do
   let b = p^.bet
   liftM return $ p & case mb of
     (Bet _) | b == Fold -> return
-            | b < mb    -> getAction
-    _       | b == None -> getAction
+            | b < mb    -> getAction False
+    _       | b == None -> getAction True
             | otherwise -> return
 
 toInt :: Bet -> Int
@@ -56,14 +56,15 @@ showState p = do
            ++ " Bet: " ++ show (toInt mb)
   liftIO $ putStrLn state
 
-getAction :: (MonadState Game m, MonadIO m) => Player -> m Player
-getAction p = do
+getAction :: (MonadState Game m, MonadIO m) => Bool -> Player -> m Player
+getAction canBet p = do
   showState p
   mb <- use maxBet
-  b <- if p^.bet == None then getCheckOrBet else getBetOrFold mb
+  b <- if canBet then getCheckOrBet else getBetOrFold mb
   let d = max 0 $ toInt b - toInt (p^.bet)
-  maxBet .= max b mb >> pot += d
-  return $ chips -~ d $ bet .~ b $ p
+  if toInt b > p^.chips
+  then liftIO (putStrLn "You don't have that many chips.") >> getAction canBet p
+  else maxBet .= max b mb >> pot += d >> (return $ chips -~ d $ bet .~ b $ p)
 
 getBetOrFold :: MonadIO m => Bet -> m Bet
 getBetOrFold mb = do
