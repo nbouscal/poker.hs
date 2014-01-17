@@ -65,7 +65,7 @@ getAction canBet p = do
   mb <- use maxBet
   b <- if canBet then getCheckOrBet else getBetOrFold mb
   let d = max 0 $ toInt b - toInt (p^.bet)
-  if toInt b > p^.chips
+  if d > p^.chips
   then putIO "You don't have that many chips." >> getAction canBet p
   else do maxBet .= max b mb
           pot += d
