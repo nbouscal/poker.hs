@@ -14,16 +14,9 @@ import System.Random.Shuffle (shuffleM)
 
 import Poker.Types
 import Poker.Hands
+import Poker.Utility
 
 initialDeck = Card <$> [minBound..] <*> [minBound..]
-
-maximums :: Ord a => [(a,b)] -> [(a,b)]
-maximums [] = []
-maximums (x:xs) = foldl f [x] xs
-  where f xs y = case compare (fst $ head xs) (fst y) of
-                      GT -> xs
-                      EQ -> y:xs
-                      LT -> [y]
 
 advance :: MonadState Game m => m ()
 advance = do

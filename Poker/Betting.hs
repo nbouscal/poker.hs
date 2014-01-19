@@ -11,15 +11,10 @@ import Text.Read (readMaybe)
 
 import Poker.Types
 import Poker.Hands
+import Poker.Utility
 
 betting :: (Functor m, MonadState Game m, MonadIO m) => m ()
 betting = unlessM bettingDone $ bettingRound >> betting
-
-unlessM :: Monad m => m Bool -> m () -> m ()
-unlessM b s = b >>= (`unless` s)
-
-putIO :: MonadIO m => String -> m ()
-putIO = liftIO . putStrLn
 
 bettingDone :: MonadState Game m => m Bool
 bettingDone = do
