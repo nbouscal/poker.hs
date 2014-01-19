@@ -8,7 +8,7 @@ import Control.Applicative
 import Control.Arrow
 import Control.Lens
 import Control.Monad.Random.Class
-import Control.Monad.State
+import Control.Monad.State hiding (state)
 import Data.List.Split
 import System.Random.Shuffle (shuffleM)
 
@@ -22,18 +22,29 @@ advance :: MonadState Game m => m ()
 advance = do
   s <- use street
   clearBets
+  clearState
   nextStreet s
   case s of
        PreDeal -> dealPlayers 2
        PreFlop -> dealCommunity 3
-       Flop -> dealCommunity 1
-       Turn -> dealCommunity 1
-       River -> deck .= initialDeck >> winners >>= splitPot
+       Flop    -> dealCommunity 1
+       Turn    -> dealCommunity 1
+       River   -> finishHand
 
 clearBets :: MonadState Game m => m ()
-clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
-  where clearUnlessFold Fold = Fold
-        clearUnlessFold _    = None
+clearBets = maxBet .= 0 >> players.traversed.bet .= 0
+
+clearState :: MonadState Game m => m ()
+clearState = players.traversed.filtered notOut.state .= None
+
+finishHand :: MonadState Game m => m ()
+finishHand = do
+  deck .= initialDeck
+  winners >>= splitPot
+  community .= []
+  players.traversed.state .= None
+  players.traversed.committed .= 0
+  players.traversed.pockets .= []
 
 nextStreet :: MonadState Game m => Street -> m ()
 nextStreet River = street .= minBound
@@ -59,7 +70,7 @@ shuffle = deck <~ (get >>= perform (deck.act shuffleM))
 winners :: MonadState Game m => m [Player]
 winners = do
   cs <- use community
-  ps <- liftM (filter (\p -> p^.bet /= Fold)) (use players)
+  ps <- liftM (filter (\p -> p^.state /= Out Fold)) (use players)
   let ws = maximums $ map (value . (++cs) . view pockets &&& id) ps
   return $ ws^..folded._2
 

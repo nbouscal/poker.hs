@@ -1,8 +1,12 @@
 module Poker.Utility where
 
 import Control.Lens
+import Control.Monad.State hiding (state)
 
 import Poker.Types
+
+notOut :: Player -> Bool
+notOut p = not $ isOut $ p^.state
 
 maximums :: Ord a => [(a,b)] -> [(a,b)]
 maximums [] = []

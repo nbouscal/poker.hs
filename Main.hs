@@ -16,12 +16,14 @@ initialState = Game
   , _deck = initialDeck
   , _pot = 0
   , _street = PreDeal
-  , _maxBet = None
+  , _maxBet = 0
   }
   where player = Player
           { _pockets = []
           , _chips = 1500
-          , _bet = None
+          , _bet = 0
+          , _state = None
+          , _committed = 0
           }
 
 play :: App ()

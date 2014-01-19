@@ -1,9 +1,10 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Poker.Types where
 
 import Control.Lens
-import Control.Monad.State
+import Control.Monad.State hiding (state)
+import Data.DeriveTH
 import Data.Function
 
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
@@ -47,9 +48,16 @@ data HandRank = HighCard | Pair | TwoPair | Trips | Straight | Flush
               | FullHouse | Quads | StraightFlush
   deriving (Eq, Ord, Show)
 
-data GenericBet a = None | Fold | Check | Bet a
-  deriving (Eq, Ord, Show, Functor)
-type Bet = GenericBet Int
+type Bet = Int
+
+data Out = Fold | AllIn
+  deriving (Eq, Show)
+
+data PlayerState = None | Out Out | In
+  deriving (Eq, Show)
+
+data Street = PreDeal | PreFlop | Flop | Turn | River
+  deriving (Eq, Ord, Show, Bounded, Enum)
 
 data Hand = Hand
   { _handRank :: HandRank
@@ -60,7 +68,9 @@ data Player = Player
   { _pockets :: [Card]
   , _chips :: Int
   , _bet :: Bet
-  } deriving Eq
+  , _state :: PlayerState
+  , _committed :: Bet
+  } deriving (Eq, Show)
 
 data Game = Game
   { _players :: [Player]
@@ -71,8 +81,7 @@ data Game = Game
   , _maxBet :: Bet
   }
 
-data Street = PreDeal | PreFlop | Flop | Turn | River
-  deriving (Eq, Ord, Show, Bounded, Enum)
+$( derive makeIs ''PlayerState)
 
 makeLenses ''Hand
 makeLenses ''Player
