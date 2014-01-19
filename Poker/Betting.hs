@@ -52,6 +52,7 @@ showState p = do
   let state = "Pockets: " ++ show (p^.pockets)
            ++ " Community: " ++ show c
            ++ " Bet: " ++ show (toInt mb)
+           ++ " Chips: " ++ show (p^.chips)
   putIO state
 
 getAction :: (Functor m, MonadState Game m, MonadIO m) => Bool -> Player -> m Player
@@ -76,9 +77,6 @@ getBetOrFold mb = do
        "raise" -> getRaise mb
        _       -> getBetOrFold mb
 
-getRaise :: MonadIO m => Bet -> m Bet
-getRaise mb = putIO "Raise by how much?" >> liftM (\r -> fmap (+r) mb) getBet
-
 getCheckOrBet :: (Functor m, MonadIO m) => m Bet
 getCheckOrBet = do
   putIO "Check or Bet?"
@@ -87,6 +85,9 @@ getCheckOrBet = do
        "check" -> return Check
        "bet"   -> putIO "Bet how much?" >> fmap Bet getBet
        _       -> getCheckOrBet
+
+getRaise :: MonadIO m => Bet -> m Bet
+getRaise mb = putIO "Raise by how much?" >> liftM (+mb) getBet
 
 getBet :: MonadIO m => m Int
 getBet = liftIO getLine >>= maybe (putIO "Invalid bet" >> getBet) return . readMaybe

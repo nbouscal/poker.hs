@@ -36,9 +36,8 @@ clearBets = maxBet .= None >> players.traversed.bet %= clearUnlessFold
         clearUnlessFold _    = None
 
 nextStreet :: MonadState Game m => Street -> m ()
-nextStreet s = if s == River
-               then street .= minBound
-               else street %= succ
+nextStreet River = street .= minBound
+nextStreet _     = street %= succ
 
 dealCommunity :: MonadState Game m => Int -> m ()
 dealCommunity n = use deck >>=
@@ -59,12 +58,10 @@ shuffle = deck <~ (get >>= perform (deck.act shuffleM))
 
 winners :: MonadState Game m => m [Player]
 winners = do
-  ps <- use players
   cs <- use community
-  let ps' = filter (\p -> p^.bet /= Fold) ps
-      hs = map (value . (++cs) . view pockets &&& id) ps'
-      ws = maximums hs
-  return $ ws^..traversed._2
+  ps <- liftM (filter (\p -> p^.bet /= Fold)) (use players)
+  let ws = maximums $ map (value . (++cs) . view pockets &&& id) ps
+  return $ ws^..folded._2
 
 splitPot :: MonadState Game m => [Player] -> m ()
 splitPot ps = do
