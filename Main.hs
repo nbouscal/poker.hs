@@ -48,7 +48,7 @@ showGame = do
   let getHands = map ((value . (++cs) &&& id) . view pockets)
       hs = getHands ps
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
-      showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (h^.handRank) ++ "\n") ""
+      showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (handRank h) ++ "\n") ""
   liftIO $ putStrLn $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
     (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands (getHands ws)
 

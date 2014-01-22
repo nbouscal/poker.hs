@@ -60,8 +60,8 @@ data Street = PreDeal | PreFlop | Flop | Turn | River
   deriving (Eq, Ord, Show, Bounded, Enum)
 
 data Hand = Hand
-  { _handRank :: HandRank
-  , _cards :: [Card]
+  { handRank :: HandRank
+  , cards :: [Card]
   } deriving (Eq, Ord)
 
 data Player = Player
@@ -83,7 +83,6 @@ data Game = Game
 
 $( derive makeIs ''PlayerState)
 
-makeLenses ''Hand
 makeLenses ''Player
 makeLenses ''Game
 
