@@ -22,9 +22,9 @@ bettingDone = do
   ps <- use players
   let actives = ps^..folded.filtered notOut
       actives' = filter notOut ps
-  return $ (length actives <= 1) ||
-    (allOf (folded.state) (/= None) actives &&
-    allOf (folded.bet) (== mb) actives)
+  return $ (allOf (folded.bet) (== mb) actives) &&
+    ((length actives <= 1) ||
+    (allOf (folded.state) (/= None) actives))
 
 bettingRound :: (MonadState Game m, MonadIO m) => m ()
 bettingRound = players <~ (get >>= perform (players.traversed.act playerAction))
