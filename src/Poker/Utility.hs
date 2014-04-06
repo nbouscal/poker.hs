@@ -1,9 +1,11 @@
 module Poker.Utility where
 
-import Control.Lens
-import Control.Monad.State hiding (state)
-
-import Poker.Types
+------------------------------------------------------------------------------
+import           Control.Lens
+import           Control.Monad.State hiding (state)
+------------------------------------------------------------------------------
+import           Poker.Types
+------------------------------------------------------------------------------
 
 notOut :: Player -> Bool
 notOut p = not $ isOut $ p^.state

@@ -2,10 +2,12 @@
 
 module Poker.Types where
 
-import Control.Lens
-import Control.Monad.State hiding (state)
-import Data.DeriveTH
-import Data.Function
+------------------------------------------------------------------------------
+import           Control.Lens
+import           Control.Monad.State hiding (state)
+import           Data.DeriveTH
+import           Data.Function
+------------------------------------------------------------------------------
 
 data Rank = Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
           | Jack | Queen | King | Ace
@@ -60,20 +62,20 @@ data Street = PreDeal | PreFlop | Flop | Turn | River
   deriving (Eq, Ord, Show, Bounded, Enum)
 
 data Player = Player
-  { _pockets :: [Card]
-  , _chips :: Int
-  , _bet :: Bet
-  , _state :: PlayerState
+  { _pockets   :: [Card]
+  , _chips     :: Int
+  , _bet       :: Bet
+  , _state     :: PlayerState
   , _committed :: Bet
   } deriving (Eq, Show)
 
 data Game = Game
-  { _players :: [Player]
+  { _players   :: [Player]
   , _community :: [Card]
-  , _deck :: [Card]
-  , _street :: Street
-  , _pot :: Int
-  , _maxBet :: Bet
+  , _deck      :: [Card]
+  , _street    :: Street
+  , _pot       :: Int
+  , _maxBet    :: Bet
   }
 
 $( derive makeIs ''PlayerState)

@@ -1,20 +1,23 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Poker.Game (
   playStreet, initialDeck, winners, shuffle
 ) where
 
-import Control.Applicative
-import Control.Arrow
-import Control.Lens hiding (Fold)
-import Control.Monad.Random.Class
-import Control.Monad.State hiding (state)
-import Data.List.Split
-import System.Random.Shuffle (shuffleM)
-
-import Poker.Types
-import Poker.Hands
-import Poker.Utility
+------------------------------------------------------------------------------
+import           Control.Applicative
+import           Control.Arrow
+import           Control.Lens               hiding (Fold)
+import           Control.Monad.Random.Class
+import           Control.Monad.State        hiding (state)
+import           Data.List.Split
+import           System.Random.Shuffle      (shuffleM)
+------------------------------------------------------------------------------
+import           Poker.Hands
+import           Poker.Types
+import           Poker.Utility
+------------------------------------------------------------------------------
 
 initialDeck = Card <$> [minBound..] <*> [minBound..]
 

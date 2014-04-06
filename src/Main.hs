@@ -1,13 +1,16 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
-import Control.Arrow
-import Control.Lens
-import Control.Monad.State
-
-import Poker.Betting
-import Poker.Game
-import Poker.Hands
-import Poker.Types
+------------------------------------------------------------------------------
+import           Control.Arrow
+import           Control.Lens
+import           Control.Monad.State
+------------------------------------------------------------------------------
+import           Poker.Betting
+import           Poker.Game
+import           Poker.Hands
+import           Poker.Types
+------------------------------------------------------------------------------
 
 initialState :: Game
 initialState = Game

@@ -4,13 +4,15 @@ module Poker.Hands (
   value
 ) where
 
-import Control.Applicative
-import Data.Function
-import Data.List
-import Data.Monoid
-import Data.Ord
-
-import Poker.Types
+------------------------------------------------------------------------------
+import           Control.Applicative
+import           Data.Function
+import           Data.List
+import           Data.Monoid
+import           Data.Ord
+------------------------------------------------------------------------------
+import           Poker.Types
+------------------------------------------------------------------------------
 
 value :: [Card] -> (HandRank, [Card])
 value h = maybe ifNotFlush ifFlush (maybeFlush h)

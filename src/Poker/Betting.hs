@@ -1,17 +1,21 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Poker.Betting (
   betting
 ) where
 
-import Control.Lens hiding (Fold)
-import Control.Monad.State hiding (state)
-import Data.Char (toLower)
-import Text.Read (readMaybe)
-
-import Poker.Types
-import Poker.Hands
-import Poker.Utility
+------------------------------------------------------------------------------
+import           Control.Lens        hiding (Fold)
+import           Control.Monad.State hiding (state)
+import           Data.Char           (toLower)
+import           Text.Read           (readMaybe)
+------------------------------------------------------------------------------
+import           Poker.Hands
+import           Poker.Types
+import           Poker.Utility
+------------------------------------------------------------------------------
 
 betting :: (MonadState Game m, MonadIO m) => m ()
 betting = unlessM bettingDone $ bettingRound >> betting
