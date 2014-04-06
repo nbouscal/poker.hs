@@ -26,16 +26,16 @@ initialState = Game
           , _committed = 0
           }
 
+playGame :: App ()
+playGame = playHand >> playGame
+
 playHand :: App ()
 playHand = do
   shuffle
-  replicateM_ 4 (advance >> betting)
+  replicateM_ 4 (playStreet >> betting)
   showGame
-  advance
+  playStreet
   showPlayers
-
-playGame :: App ()
-playGame = playHand >> playGame
 
 showBets :: (MonadState Game m, MonadIO m) => m ()
 showBets = use players >>= liftIO . print . map (view bet &&& view chips)
@@ -48,7 +48,7 @@ showGame = do
   let getHands = map ((value . (++cs) &&& id) . view pockets)
       hs = getHands ps
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
-      showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (handRank h) ++ "\n") ""
+      showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (fst h) ++ "\n") ""
   liftIO $ putStrLn $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
     (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands (getHands ws)
 

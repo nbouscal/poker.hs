@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Poker.Game (
-  advance, initialDeck, winners, shuffle
+  playStreet, initialDeck, winners, shuffle
 ) where
 
 import Control.Applicative
 import Control.Arrow
-import Control.Lens
+import Control.Lens hiding (Fold)
 import Control.Monad.Random.Class
 import Control.Monad.State hiding (state)
 import Data.List.Split
@@ -18,8 +18,8 @@ import Poker.Utility
 
 initialDeck = Card <$> [minBound..] <*> [minBound..]
 
-advance :: MonadState Game m => m ()
-advance = do
+playStreet :: MonadState Game m => m ()
+playStreet = do
   s <- use street
   clearBets
   clearState
@@ -37,22 +37,9 @@ clearBets = maxBet .= 0 >> players.traversed.bet .= 0
 clearState :: MonadState Game m => m ()
 clearState = players.traversed.filtered notOut.state .= None
 
-finishHand :: MonadState Game m => m ()
-finishHand = do
-  deck .= initialDeck
-  winners >>= splitPot
-  community .= []
-  players.traversed.state .= None
-  players.traversed.committed .= 0
-  players.traversed.pockets .= []
-
 nextStreet :: MonadState Game m => Street -> m ()
 nextStreet River = street .= minBound
 nextStreet _     = street %= succ
-
-dealCommunity :: MonadState Game m => Int -> m ()
-dealCommunity n = use deck >>=
-  uncurry (>>) . bimap (community <>=) (deck .=) . splitAt n
 
 -- who is dealer? last in array => rotate array each hand?
 --                add a _dealer to game, index of players?
@@ -63,6 +50,22 @@ dealPlayers n = do
   let (hs, d') = first (chunksOf n) $ splitAt (m * n) d
   players.traversed %@= (\i -> pockets <>~ (hs !! i))
   deck .= d'
+
+dealCommunity :: MonadState Game m => Int -> m ()
+dealCommunity n = do
+  d <- use deck
+  let (x,y) = splitAt n d
+  community <>= x
+  deck .= y
+
+finishHand :: MonadState Game m => m ()
+finishHand = do
+  deck .= initialDeck
+  winners >>= splitPot
+  community .= []
+  players.traversed.state .= None
+  players.traversed.committed .= 0
+  players.traversed.pockets .= []
 
 shuffle :: (MonadState Game m, MonadRandom m) => m ()
 shuffle = deck <~ (get >>= perform (deck.act shuffleM))

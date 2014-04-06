@@ -4,7 +4,7 @@ module Poker.Betting (
   betting
 ) where
 
-import Control.Lens
+import Control.Lens hiding (Fold)
 import Control.Monad.State hiding (state)
 import Data.Char (toLower)
 import Text.Read (readMaybe)
@@ -20,8 +20,7 @@ bettingDone :: MonadState Game m => m Bool
 bettingDone = do
   mb <- use maxBet
   ps <- use players
-  let actives = ps^..folded.filtered notOut
-      actives' = filter notOut ps
+  let actives = filter notOut ps
   return $ allOf (folded.bet) (== mb) actives &&
     ((length actives <= 1) ||
     allOf (folded.state) (/= None) actives)

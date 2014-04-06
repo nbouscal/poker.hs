@@ -1,0 +1,25 @@
+Name:                poker
+Version:             0.1
+License:             AllRightsReserved
+Author:              Nathan Bouscal
+Maintainer:          nbouscal@gmail.com
+Stability:           Experimental
+Category:            Web
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+
+Executable poker
+  hs-source-dirs: src
+  main-is: Main.hs
+  ghc-options: -threaded -Wall -fwarn-tabs -funbox-strict-fields -O2
+               -fno-warn-orphans -fno-warn-unused-do-bind
+
+  Build-depends:
+    base,
+    random-shuffle,
+    split,
+    lens,
+    MonadRandom,
+    derive,
+    mtl

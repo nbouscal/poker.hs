@@ -59,11 +59,6 @@ data PlayerState = None | Out Out | In
 data Street = PreDeal | PreFlop | Flop | Turn | River
   deriving (Eq, Ord, Show, Bounded, Enum)
 
-data Hand = Hand
-  { handRank :: HandRank
-  , cards :: [Card]
-  } deriving (Eq, Ord)
-
 data Player = Player
   { _pockets :: [Card]
   , _chips :: Int
