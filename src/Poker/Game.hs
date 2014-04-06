@@ -1,9 +1,12 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Poker.Game (
-  playStreet, initialDeck, winners, shuffle
-) where
+module Poker.Game
+  ( playStreet
+  , initialDeck
+  , winners
+  , shuffle
+  ) where
 
 ------------------------------------------------------------------------------
 import           Control.Applicative
@@ -19,6 +22,7 @@ import           Poker.Types
 import           Poker.Utility
 ------------------------------------------------------------------------------
 
+initialDeck :: [Card]
 initialDeck = Card <$> [minBound..] <*> [minBound..]
 
 playStreet :: MonadState Game m => m ()

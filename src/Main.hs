@@ -46,13 +46,13 @@ showBets = use players >>= liftIO . print . map (view bet &&& view chips)
 showGame :: (MonadState Game m, MonadIO m) => m ()
 showGame = do
   ps <- use players
-  cs <- use community
+  com <- use community
   ws <- winners
-  let getHands = map ((value . (++cs) &&& id) . view pockets)
+  let getHands = map ((value . (++com) &&& id) . view pockets)
       hs = getHands ps
       showCards = foldl (\a c -> a ++ " " ++ show c) "\t"
       showHands = foldl (\a (h, cs) -> a ++ showCards cs ++ " – " ++ show (fst h) ++ "\n") ""
-  liftIO $ putStrLn $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards cs ++
+  liftIO $ putStrLn $ "Hands:\n" ++ showHands hs ++ "Community:\n" ++ showCards com ++
     (if length ws == 1 then "\nWinner:\n" else "\nWinners:\n") ++ showHands (getHands ws)
 
 showPlayers :: (MonadState Game m, MonadIO m) => m ()

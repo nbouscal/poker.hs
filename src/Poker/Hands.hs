@@ -1,8 +1,8 @@
 {-# LANGUAGE TupleSections #-}
 
-module Poker.Hands (
-  value
-) where
+module Poker.Hands
+  ( value
+  ) where
 
 ------------------------------------------------------------------------------
 import           Control.Applicative

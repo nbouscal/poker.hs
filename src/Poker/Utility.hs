@@ -13,9 +13,9 @@ notOut p = not $ isOut $ p^.state
 maximums :: Ord a => [(a,b)] -> [(a,b)]
 maximums [] = []
 maximums (x:xs) = foldl f [x] xs
-  where f xs y = case fst (head xs) `compare` fst y of
-                      GT -> xs
-                      EQ -> y:xs
+  where f ys y = case fst (head ys) `compare` fst y of
+                      GT -> ys
+                      EQ -> y:ys
                       LT -> [y]
 
 unlessM :: Monad m => m Bool -> m () -> m ()

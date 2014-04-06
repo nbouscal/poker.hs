@@ -2,9 +2,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TupleSections         #-}
 
-module Poker.Betting (
-  betting
-) where
+module Poker.Betting
+  ( betting
+  ) where
 
 ------------------------------------------------------------------------------
 import           Control.Lens        hiding (Fold)
@@ -12,7 +12,6 @@ import           Control.Monad.State hiding (state)
 import           Data.Char           (toLower)
 import           Text.Read           (readMaybe)
 ------------------------------------------------------------------------------
-import           Poker.Hands
 import           Poker.Types
 import           Poker.Utility
 ------------------------------------------------------------------------------
@@ -46,11 +45,10 @@ showState :: (MonadState Game m, MonadIO m) => Player -> m ()
 showState p = do
   c <- use community
   mb <- use maxBet
-  let state = "Pockets: " ++ show (p^.pockets)
-           ++ " Community: " ++ show c
-           ++ " Bet: " ++ show mb
-           ++ " Chips: " ++ show (p^.chips)
-  putIO state
+  putIO $ "Pockets: " ++ show (p^.pockets)
+      ++ " Community: " ++ show c
+      ++ " Bet: " ++ show mb
+      ++ " Chips: " ++ show (p^.chips)
 
 getAction :: (MonadState Game m, MonadIO m) => Bool -> Player -> m Player
 getAction canBet p = do
@@ -59,9 +57,9 @@ getAction canBet p = do
   (s, b) <- if canBet then getCheckOrBet else getBetOrFold mb
   let d = max 0 $ b - (p^.bet)
       makeBet = (chips -~ d) . (bet +~ d) . (committed +~ d)
-      update s = do maxBet .= max b mb
-                    pot += d
-                    return $ state .~ s $ makeBet p
+      update ps = do maxBet .= max b mb
+                     pot += d
+                     return $ state .~ ps $ makeBet p
   case d `compare` (p^.chips) of
        GT -> putIO "You don't have that many chips." >> getAction canBet p
        EQ -> update $ Out AllIn
