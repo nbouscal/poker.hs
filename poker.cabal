@@ -20,6 +20,7 @@ Executable poker
     random-shuffle,
     split,
     lens,
+    lens-action,
     MonadRandom,
     derive,
     mtl

@@ -5,7 +5,6 @@ module Poker.Hands
   ) where
 
 ------------------------------------------------------------------------------
-import           Control.Applicative
 import           Data.Function
 import           Data.List
 import           Data.Monoid

@@ -9,9 +9,9 @@ module Poker.Game
   ) where
 
 ------------------------------------------------------------------------------
-import           Control.Applicative
 import           Control.Arrow
 import           Control.Lens               hiding (Fold)
+import           Control.Lens.Action
 import           Control.Monad.Random.Class
 import           Control.Monad.State        hiding (state)
 import           Data.List.Split

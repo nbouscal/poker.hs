@@ -8,6 +8,7 @@ module Poker.Betting
 
 ------------------------------------------------------------------------------
 import           Control.Lens        hiding (Fold)
+import           Control.Lens.Action
 import           Control.Monad.State hiding (state)
 import           Data.Char           (toLower)
 import           Text.Read           (readMaybe)
