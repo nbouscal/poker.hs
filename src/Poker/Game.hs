@@ -11,7 +11,6 @@ module Poker.Game
 ------------------------------------------------------------------------------
 import           Control.Arrow
 import           Control.Lens               hiding (Fold)
-import           Control.Lens.Action
 import           Control.Monad.Random.Class
 import           Control.Monad.State        hiding (state)
 import           Data.List.Split
@@ -75,7 +74,7 @@ finishHand = do
   players.traversed.pockets .= []
 
 shuffle :: (MonadState Game m, MonadRandom m) => m ()
-shuffle = deck <~ (get >>= perform (deck.act shuffleM))
+shuffle = use deck >>= shuffleM >>= assign deck
 
 winners :: MonadState Game m => m [Player]
 winners = do
