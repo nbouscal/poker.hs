@@ -21,6 +21,7 @@ Executable poker
     split,
     lens,
     lens-action,
+    monad-loops,
     MonadRandom,
     derive,
     mtl
