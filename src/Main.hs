@@ -5,6 +5,7 @@
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad.State
+import           Control.Monad.Loops
 ------------------------------------------------------------------------------
 import           Poker.Betting
 import           Poker.Game
@@ -35,7 +36,7 @@ playGame = playHand >> playGame
 playHand :: App ()
 playHand = do
   shuffle
-  replicateM_ 4 (playStreet >> betting)
+  whileM (uses street (< River)) (playStreet >> betting)
   showGame
   playStreet
   showPlayers
