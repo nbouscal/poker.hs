@@ -24,4 +24,5 @@ Executable poker
     monad-loops,
     MonadRandom,
     derive,
-    mtl
+    mtl,
+    transformers

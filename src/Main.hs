@@ -5,6 +5,7 @@
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad.State
+import           Control.Monad.Trans.Class
 import           Control.Monad.Loops
 ------------------------------------------------------------------------------
 import           Poker.Betting
